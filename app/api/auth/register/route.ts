@@ -17,6 +17,19 @@ function isValidPaymentMethod(value: string): value is PaymentMethod {
   );
 }
 
+async function safeSaveProfileImage(profileImageFile: File | null) {
+  if (!profileImageFile) {
+    return null;
+  }
+
+  try {
+    return await saveProfileImage(profileImageFile);
+  } catch (error) {
+    console.error("PROFILE_IMAGE_UPLOAD_ERROR:", error);
+    return null;
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const contentType = req.headers.get("content-type") || "";
@@ -176,7 +189,7 @@ export async function POST(req: Request) {
 
     const validPaymentMethod = paymentMethod as PaymentMethod;
 
-    const profileImage = await saveProfileImage(profileImageFile);
+    const profileImage = await safeSaveProfileImage(profileImageFile);
 
     const monthlyFee = selectedPlan.monthlyFee;
     const personalTrainingFee =
@@ -230,7 +243,7 @@ export async function POST(req: Request) {
                   status: "PAID",
                   paidForMonth: format(startDate, "MMMM yyyy"),
                   paidAt: startDate,
-                  dueDate: startDate,
+                  dueDate: nextDueDate,
                   note: `Initial registration payment - ${selectedPlan.name}`,
                 },
               },

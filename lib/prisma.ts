@@ -6,14 +6,26 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const adapter = new PrismaMariaDb({
-  host: "localhost",
-  port: 3306,
-  user: "root",
-  password: "Anuhas2004",
-  database: "dolphin_fitness_center",
-  allowPublicKeyRetrieval: true,
-});
+function getDatabaseConfig() {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL is not set");
+  }
+
+  const url = new URL(databaseUrl);
+
+  return {
+    host: url.hostname,
+    port: Number(url.port || 3306),
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
+    database: url.pathname.replace("/", ""),
+    allowPublicKeyRetrieval: true,
+  };
+}
+
+const adapter = new PrismaMariaDb(getDatabaseConfig());
 
 export const prisma =
   globalForPrisma.prisma ??

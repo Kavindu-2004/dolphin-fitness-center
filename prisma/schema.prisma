@@ -1,0 +1,353 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String
+  password  String
+  role      UserRole @default(MEMBER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  firstName String
+  lastName  String
+  member    Member?
+}
+
+model Member {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  memberNo     String    @unique
+  address      String?
+  gender       Gender?
+  dob          DateTime?
+  profileImage String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  age          Int?
+
+  bodyProfiles   BodyProfile[]
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments       Payment[]
+  reminders      Reminder[]
+  subscription   Subscription?
+  onlinePayments OnlinePayment[]
+  feedbacks      ClientFeedback[]
+}
+
+model Coach {
+  id                   String         @id @default(cuid())
+  name                 String
+  phone                String
+  email                String?
+  specialty            String
+  experience           String
+  description          String?        @db.Text
+  image                String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  subscriptions        Subscription[] @relation("CurrentSubscriptionCoach")
+  pendingSubscriptions Subscription[] @relation("PendingSubscriptionCoach")
+}
+
+model MembershipPlan {
+  id                 String  @id @default(cuid())
+  name               String  @unique
+  slug               String  @unique
+  description        String? @db.Text
+  monthlyFee         Int
+  features           String? @db.Text
+  isActive           Boolean @default(true)
+  isPersonalTraining Boolean @default(false)
+  requiresCoach      Boolean @default(false)
+  priority           Int     @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions        Subscription[] @relation("CurrentMembershipPlan")
+  pendingSubscriptions Subscription[] @relation("PendingMembershipPlan")
+
+  @@index([slug], map: "MembershipPlan_slug_idx")
+  @@index([isActive], map: "MembershipPlan_isActive_idx")
+  @@index([priority], map: "MembershipPlan_priority_idx")
+}
+
+model Subscription {
+  id       String @id @default(cuid())
+  memberId String @unique
+
+  /**
+   * Old fields kept for compatibility with your current pages/APIs.
+   * New membership system should use planId and plan.monthlyFee.
+   */
+  type                SubscriptionType @default(NORMAL_MONTHLY)
+  monthlyFee          Int              @default(3500)
+  personalTrainingFee Int              @default(0)
+  totalMonthlyFee     Int
+
+  status SubscriptionStatus @default(PENDING_PAYMENT)
+
+  planId        String?
+  pendingPlanId String?
+
+  coachId        String?
+  pendingCoachId String?
+
+  startDate    DateTime
+  nextDueDate  DateTime
+  lastPaidDate DateTime?
+
+  pendingPlanEffectiveDate DateTime?
+  pendingPlanRequestedAt   DateTime?
+  changeNote               String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payments     Payment[]
+  coach        Coach?    @relation("CurrentSubscriptionCoach", fields: [coachId], references: [id])
+  pendingCoach Coach?    @relation("PendingSubscriptionCoach", fields: [pendingCoachId], references: [id])
+  member       Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  plan        MembershipPlan? @relation("CurrentMembershipPlan", fields: [planId], references: [id])
+  pendingPlan MembershipPlan? @relation("PendingMembershipPlan", fields: [pendingPlanId], references: [id])
+
+  @@index([coachId], map: "Subscription_coachId_fkey")
+  @@index([pendingCoachId], map: "Subscription_pendingCoachId_fkey")
+  @@index([planId], map: "Subscription_planId_fkey")
+  @@index([pendingPlanId], map: "Subscription_pendingPlanId_fkey")
+  @@index([pendingPlanEffectiveDate], map: "Subscription_pendingPlanEffectiveDate_idx")
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  memberId       String
+  subscriptionId String?
+  amount         Int
+  method         PaymentMethod
+  status         PaymentStatus @default(PAID)
+  paidForMonth   String
+  paidAt         DateTime      @default(now())
+  dueDate        DateTime
+  note           String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  member         Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([memberId], map: "Payment_memberId_fkey")
+  @@index([subscriptionId], map: "Payment_subscriptionId_fkey")
+}
+
+model BodyProfile {
+  id         String   @id @default(cuid())
+  memberId   String
+  heightCm   Float?
+  weightKg   Float?
+  bmi        Float?
+  chest      Float?
+  waist      Float?
+  hip        Float?
+  biceps     Float?
+  thigh      Float?
+  bodyFat    Float?
+  notes      String?  @db.Text
+  measuredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId], map: "BodyProfile_memberId_fkey")
+}
+
+model Reminder {
+  id        String         @id @default(cuid())
+  memberId  String
+  type      ReminderType
+  status    ReminderStatus @default(PENDING)
+  message   String         @db.Text
+  sentAt    DateTime?
+  dueDate   DateTime
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  member    Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId], map: "Reminder_memberId_fkey")
+}
+
+model SystemSetting {
+  id                  String   @id @default(cuid())
+  gymName             String   @default("Dolphin Fitness Center")
+  monthlyFee          Int      @default(3500)
+  personalTrainingFee Int      @default(15000)
+  currency            String   @default("LKR")
+  reminderDaysBefore  Int      @default(3)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  logoUrl             String?
+}
+
+model OnlinePayment {
+  id       String @id @default(cuid())
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  amount            Int
+  currency          String  @default("LKR")
+  provider          String  @default("HELAPAY")
+  providerOrderId   String?
+  providerPaymentId String?
+  status            String  @default("PENDING")
+
+  purpose      String  @default("MEMBERSHIP_RENEWAL")
+  paymentUrl   String? @db.Text
+  callbackData String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([memberId], map: "OnlinePayment_memberId_fkey")
+}
+
+model ClientFeedback {
+  id       String @id @default(cuid())
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  rating  Int
+  message String         @db.Text
+  status  FeedbackStatus @default(PENDING)
+
+  approvedAt DateTime?
+  rejectedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([memberId], map: "ClientFeedback_memberId_fkey")
+  @@index([status], map: "ClientFeedback_status_idx")
+}
+
+model Announcement {
+  id       String           @id @default(cuid())
+  title    String
+  message  String           @db.Text
+  type     AnnouncementType @default(NOTICE)
+  imageUrl String?
+
+  eventDate DateTime?
+  isActive  Boolean   @default(true)
+  priority  Int       @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type], map: "Announcement_type_idx")
+  @@index([isActive], map: "Announcement_isActive_idx")
+  @@index([eventDate], map: "Announcement_eventDate_idx")
+}
+
+model SiteVideo {
+  id          String  @id @default(cuid())
+  title       String
+  description String? @db.Text
+  videoUrl    String  @db.Text
+  isActive    Boolean @default(true)
+  priority    Int     @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive], map: "SiteVideo_isActive_idx")
+  @@index([priority], map: "SiteVideo_priority_idx")
+}
+
+model BlogPost {
+  id          String  @id @default(cuid())
+  title       String
+  slug        String  @unique
+  excerpt     String? @db.Text
+  content     String  @db.Text
+  coverImage  String?
+  isPublished Boolean @default(true)
+  isFeatured  Boolean @default(false)
+  priority    Int     @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug], map: "BlogPost_slug_idx")
+  @@index([isPublished], map: "BlogPost_isPublished_idx")
+  @@index([isFeatured], map: "BlogPost_isFeatured_idx")
+  @@index([priority], map: "BlogPost_priority_idx")
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum SubscriptionType {
+  NORMAL_MONTHLY
+  PERSONAL_TRAINING
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING_PAYMENT
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  FAILED
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  ONLINE
+}
+
+enum ReminderType {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum ReminderStatus {
+  SENT
+  FAILED
+  PENDING
+}
+
+enum FeedbackStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AnnouncementType {
+  NOTICE
+  EVENT
+  CLOSING_DAY
+  IMPORTANT
+}

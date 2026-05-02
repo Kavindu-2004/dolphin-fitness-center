@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
 import AdminMobileMenuCloseListener from "@/components/AdminMobileMenuCloseListener";

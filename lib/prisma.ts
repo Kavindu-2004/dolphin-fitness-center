@@ -11,7 +11,6 @@ const FALLBACK_DATABASE_URL =
 
 function getDatabaseConfig() {
   const databaseUrl = process.env.DATABASE_URL || FALLBACK_DATABASE_URL;
-
   const url = new URL(databaseUrl);
 
   return {
@@ -21,17 +20,24 @@ function getDatabaseConfig() {
     password: decodeURIComponent(url.password),
     database: url.pathname.replace("/", ""),
     allowPublicKeyRetrieval: true,
+
+    // Important for AWS Amplify/serverless + small RDS instance
+    connectionLimit: 1,
+    acquireTimeout: 20000,
+    connectTimeout: 20000,
   };
 }
 
-const adapter = new PrismaMariaDb(getDatabaseConfig());
+function createPrismaClient() {
+  const adapter = new PrismaMariaDb(getDatabaseConfig());
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+  return new PrismaClient({
     adapter,
     log: ["error", "warn"],
   });
+}
+
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;

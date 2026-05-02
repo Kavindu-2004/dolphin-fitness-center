@@ -7,11 +7,9 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function getDatabaseConfig() {
-  const databaseUrl = process.env.DATABASE_URL;
-
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is not set");
-  }
+  const databaseUrl =
+    process.env.DATABASE_URL ||
+    "mysql://dummy:dummy@localhost:3306/dummy_database";
 
   const url = new URL(databaseUrl);
 

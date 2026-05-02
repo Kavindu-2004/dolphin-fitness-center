@@ -56,6 +56,19 @@ async function getCurrentAdmin() {
   return admin;
 }
 
+async function safeSaveGymLogo(uploadedLogo: File | null, currentLogoUrl: string | null) {
+  if (!uploadedLogo || uploadedLogo.size <= 0) {
+    return currentLogoUrl;
+  }
+
+  try {
+    return await saveGymLogo(uploadedLogo);
+  } catch (error) {
+    console.error("GYM_LOGO_UPLOAD_ERROR:", error);
+    return currentLogoUrl;
+  }
+}
+
 export async function GET() {
   try {
     const settings = await getOrCreateSettings();
@@ -99,25 +112,29 @@ export async function PUT(req: Request) {
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
 
-      gymName = String(formData.get("gymName") || "");
-      monthlyFee = String(formData.get("monthlyFee") || "");
-      personalTrainingFee = String(formData.get("personalTrainingFee") || "");
-      currency = String(formData.get("currency") || "");
-      reminderDaysBefore = String(formData.get("reminderDaysBefore") || "");
+      gymName = String(formData.get("gymName") || "").trim();
+      monthlyFee = String(formData.get("monthlyFee") || "").trim();
+      personalTrainingFee = String(
+        formData.get("personalTrainingFee") || ""
+      ).trim();
+      currency = String(formData.get("currency") || "").trim();
+      reminderDaysBefore = String(
+        formData.get("reminderDaysBefore") || ""
+      ).trim();
 
       const uploadedLogo = formData.get("logo");
 
       if (uploadedLogo instanceof File && uploadedLogo.size > 0) {
-        logoUrl = await saveGymLogo(uploadedLogo);
+        logoUrl = await safeSaveGymLogo(uploadedLogo, existing.logoUrl);
       }
     } else {
       const body = await req.json();
 
-      gymName = String(body.gymName || "");
-      monthlyFee = String(body.monthlyFee || "");
-      personalTrainingFee = String(body.personalTrainingFee || "");
-      currency = String(body.currency || "");
-      reminderDaysBefore = String(body.reminderDaysBefore || "");
+      gymName = String(body.gymName || "").trim();
+      monthlyFee = String(body.monthlyFee || "").trim();
+      personalTrainingFee = String(body.personalTrainingFee || "").trim();
+      currency = String(body.currency || "").trim();
+      reminderDaysBefore = String(body.reminderDaysBefore || "").trim();
       logoUrl = body.logoUrl ?? existing.logoUrl;
     }
 

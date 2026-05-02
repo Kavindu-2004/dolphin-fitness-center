@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_SESSION_COOKIE } from "@/lib/auth";
+import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
 export const runtime = "nodejs";
@@ -18,17 +19,6 @@ function createAdminSessionToken(adminId: string) {
     .digest("hex");
 
   return `${payload}.${signature}`;
-}
-
-function safeCompare(valueA: string, valueB: string) {
-  const bufferA = Buffer.from(valueA);
-  const bufferB = Buffer.from(valueB);
-
-  if (bufferA.length !== bufferB.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(bufferA, bufferB);
 }
 
 export async function POST(req: Request) {
@@ -65,11 +55,7 @@ export async function POST(req: Request) {
       );
     }
 
-    /*
-      This matches your current password directly.
-      If your passwords are hashed later, we can upgrade this to bcrypt.
-    */
-    const passwordMatches = safeCompare(password, admin.password);
+    const passwordMatches = await bcrypt.compare(password, admin.password);
 
     if (!passwordMatches) {
       return NextResponse.json(

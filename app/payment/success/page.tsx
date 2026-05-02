@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
-import { useState } from "react";
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const onlinePaymentId = searchParams.get("onlinePaymentId");
 
@@ -118,5 +118,21 @@ export default function PaymentSuccessPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-black px-6 text-white">
+          <div className="w-full max-w-xl rounded-[2rem] border border-white/10 bg-white/[0.06] p-8 text-center shadow-2xl backdrop-blur-xl">
+            <p className="text-zinc-400">Loading payment details...</p>
+          </div>
+        </main>
+      }
+    >
+      <PaymentSuccessContent />
+    </Suspense>
   );
 }

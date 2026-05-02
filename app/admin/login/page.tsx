@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Dumbbell, Loader2, Lock, Mail } from "lucide-react";
 
-export default function AdminLoginPage() {
+function AdminLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -136,5 +136,25 @@ export default function AdminLoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen overflow-hidden bg-black px-6 py-12 text-white">
+          <div className="relative z-10 mx-auto flex min-h-[calc(100vh-6rem)] max-w-7xl items-center justify-center">
+            <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.06] p-8 text-center shadow-2xl backdrop-blur-xl">
+              <p className="text-sm font-bold text-zinc-400">
+                Loading admin login...
+              </p>
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <AdminLoginContent />
+    </Suspense>
   );
 }

@@ -6,10 +6,11 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+const FALLBACK_DATABASE_URL =
+  "mysql://admin:DolphinGym2026Strong@dolphin-fitness-db.cy5eq6w8grgd.us-east-1.rds.amazonaws.com:3306/dolphin_fitness_center";
+
 function getDatabaseConfig() {
-  const databaseUrl =
-    process.env.DATABASE_URL ||
-    "mysql://dummy:dummy@localhost:3306/dummy_database";
+  const databaseUrl = process.env.DATABASE_URL || FALLBACK_DATABASE_URL;
 
   const url = new URL(databaseUrl);
 
